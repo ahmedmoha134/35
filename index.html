@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>اسحب حرف ت إلى مكانه</title>
+  <style>
+    :root {
+      --purple: #7654d9;
+      --pink: #ff6fae;
+      --yellow: #ffd85e;
+      --mint: #78dfc1;
+      --ink: #332b59;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 18px;
+      color: var(--ink);
+      font-family: Tahoma, Arial, sans-serif;
+      background:
+        radial-gradient(circle at 10% 12%, #ffe994 0 7%, transparent 7.5%),
+        radial-gradient(circle at 92% 18%, #ffb5d2 0 8%, transparent 8.5%),
+        linear-gradient(135deg, #d9f7ee, #e9ddff 55%, #fff1d2);
+    }
+
+    button { font: inherit; }
+
+    .game {
+      width: min(820px, 100%);
+      margin: 0 auto;
+      padding: clamp(18px, 4vw, 36px);
+      border: 5px solid white;
+      border-radius: 30px;
+      background: rgba(255, 253, 248, .97);
+      box-shadow: 0 18px 50px #4f3d8030;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--purple);
+      font-size: clamp(2rem, 6vw, 3rem);
+    }
+
+    .letter-icon {
+      display: inline-grid;
+      width: 48px;
+      height: 48px;
+      margin-inline: 3px;
+      place-items: center;
+      border-radius: 15px;
+      color: white;
+      background: var(--pink);
+      font-size: 2rem;
+      transform: rotate(-5deg);
+    }
+
+    .subtitle { margin: 8px 0 18px; }
+
+    .topline {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin: 14px 0;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: #f0ebff;
+      font-weight: bold;
+    }
+
+    .progress {
+      display: flex;
+      justify-content: center;
+      gap: 7px;
+      margin: 16px auto;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ded8eb;
+    }
+
+    .dot.current { background: var(--pink); transform: scale(1.25); }
+    .dot.done { background: #54c9a5; }
+
+    .instruction {
+      margin: 16px 0 8px;
+      color: #665c7d;
+      line-height: 1.7;
+    }
+
+    .target-position {
+      color: var(--purple);
+      font-weight: bold;
+    }
+
+    .drag-area {
+      display: grid;
+      min-height: 132px;
+      margin: 12px auto 18px;
+      place-items: center;
+      border: 2px dashed #ded4fa;
+      border-radius: 22px;
+      background: #fbf8ff;
+    }
+
+    .drag-letter {
+      display: grid;
+      width: 82px;
+      height: 82px;
+      place-items: center;
+      border: 4px solid white;
+      border-radius: 25px;
+      color: white;
+      background: var(--pink);
+      box-shadow: 0 7px 0 #d94d8a, 0 10px 20px #4f3d8022;
+      cursor: grab;
+      font-size: 3.2rem;
+      font-weight: bold;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .drag-letter:active { cursor: grabbing; }
+
+    .drag-letter.dragging {
+      position: fixed;
+      z-index: 1000;
+      margin: 0;
+      pointer-events: none;
+      transform: scale(1.08) rotate(-5deg);
+    }
+
+    .words {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    .word-card {
+      display: grid;
+      min-height: 100px;
+      padding: 10px 6px;
+      place-items: center;
+      border: 3px solid white;
+      border-radius: 20px;
+      color: var(--purple);
+      background: #fff7d9;
+      box-shadow: 0 5px 0 #e1cc72;
+      font-size: clamp(1.25rem, 4vw, 1.8rem);
+      font-weight: bold;
+      transition: transform .18s, background .18s, opacity .2s;
+    }
+
+    .word-card .ta {
+      color: #e84c91;
+      text-decoration: underline;
+      text-decoration-thickness: 3px;
+      text-underline-offset: 4px;
+    }
+
+    .word-card.drop-hover {
+      background: #e7fff5;
+      transform: translateY(-4px) scale(1.04);
+      box-shadow: 0 7px 0 #69c9a8;
+    }
+
+    .word-card.wrong {
+      animation: shake .32s;
+      background: #ffe3ed;
+    }
+
+    .word-card.removing {
+      opacity: 0;
+      transform: scale(.65) rotate(8deg);
+    }
+
+    @keyframes shake {
+      25% { transform: translateX(-6px); }
+      50% { transform: translateX(6px); }
+      75% { transform: translateX(-4px); }
+    }
+
+    .message {
+      min-height: 32px;
+      margin: 14px 0;
+      color: var(--purple);
+      font-weight: bold;
+    }
+
+    .action {
+      min-height: 50px;
+      padding: 11px 24px;
+      border: 0;
+      border-radius: 999px;
+      color: white;
+      background: var(--purple);
+      box-shadow: 0 5px 0 #5940ae;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .action:hover { filter: brightness(1.07); }
+
+    .result {
+      padding: 24px 12px;
+      border-radius: 24px;
+      background: #f5f0ff;
+    }
+
+    .result h2 {
+      color: var(--purple);
+      font-size: 2rem;
+    }
+
+    .final-score {
+      color: #e84c91;
+      font-size: 2.2rem;
+      font-weight: bold;
+    }
+
+    .help {
+      margin: 14px 0 0;
+      color: #746b86;
+      font-size: .9rem;
+    }
+
+    [hidden] { display: none !important; }
+
+    @media (max-width: 600px) {
+      body { padding: 8px; }
+      .game { padding: 18px 12px; border-radius: 23px; }
+      .words { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .word-card { min-height: 78px; }
+      .drag-area { min-height: 112px; }
+      .drag-letter { width: 72px; height: 72px; }
+      .topline { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+  <main class="game">
+    <h1>اسحب حرف <span class="letter-icon">ت</span></h1>
+    <p class="subtitle">اسحب الحرف إلى كلمة فيها ت في المكان المطلوب! 🌟</p>
+
+    <section id="gameArea">
+      <div class="topline">
+        <div class="badge" id="questionCounter"></div>
+        <div class="badge">الرصيد: <span id="score">٠</span> من ٢٠</div>
+      </div>
+
+      <div class="progress" id="progress" aria-label="التقدم في اللعبة"></div>
+
+      <p class="instruction">
+        اسحب حرف <strong>ت</strong> إلى كلمة يكون فيها في
+        <span class="target-position" id="targetPosition"></span>
+      </p>
+
+      <div class="drag-area">
+        <div class="drag-letter" id="dragLetter" role="button"
+             aria-label="اسحب حرف ت" tabindex="0">ت</div>
+      </div>
+
+      <section class="words" id="words" aria-label="الكلمات"></section>
+
+      <p class="message" id="message" aria-live="polite">
+        اختر كلمة مناسبة واسحب حرف ت إليها.
+      </p>
+      <p class="help">يمكنك سحب الحرف بإصبعك على الهاتف أو بالفأرة على الكمبيوتر.</p>
+    </section>
+
+    <section class="result" id="result" hidden aria-live="polite">
+      <h2>أحسنت! أكملت اللعبة 🎉</h2>
+      <p>رصيدك النهائي:</p>
+      <p class="final-score"><span id="finalScore">٠</span> من ٢٠ نقطة</p>
+      <button class="action" id="restartButton" type="button">العب مرة أخرى 🔄</button>
+    </section>
+  </main>
+
+  <script>
+    const batches = [
+      [
+        { word: "تفاح", position: "first" },
+        { word: "كتاب", position: "middle" },
+        { word: "بيت", position: "last" },
+        { word: "تمر", position: "first" },
+        { word: "مفتاح", position: "middle" }
+      ],
+      [
+        { word: "تاج", position: "first" },
+        { word: "فتاة", position: "middle" },
+        { word: "حوت", position: "last" },
+        { word: "تمساح", position: "first" },
+        { word: "مكتب", position: "middle" }
+      ],
+      [
+        { word: "تلميذ", position: "first" },
+        { word: "ستارة", position: "middle" },
+        { word: "صوت", position: "last" },
+        { word: "تنين", position: "first" },
+        { word: "بستان", position: "middle" }
+      ],
+      [
+        { word: "تلفاز", position: "first" },
+        { word: "متحف", position: "middle" },
+        { word: "زيت", position: "last" },
+        { word: "تذكرة", position: "first" },
+        { word: "فستان", position: "middle" }
+      ]
+    ];
+
+    // لكل خمس كلمات: أول، وسط، آخر، أول، وسط.
+    const targetSequence = [
+      "first", "middle", "last", "first", "middle",
+      "first", "middle", "last", "first", "middle",
+      "first", "middle", "last", "first", "middle",
+      "first", "middle", "last", "first", "middle"
+    ];
+
+    const positionNames = {
+      first: "أول الكلمة",
+      middle: "وسط الكلمة",
+      last: "آخر الكلمة"
+    };
+
+    const gameArea = document.getElementById("gameArea");
+    const wordsElement = document.getElementById("words");
+    const dragLetter = document.getElementById("dragLetter");
+    const targetPositionElement = document.getElementById("targetPosition");
+    const questionCounter = document.getElementById("questionCounter");
+    const scoreElement = document.getElementById("score");
+    const message = document.getElementById("message");
+    const progress = document.getElementById("progress");
+    const result = document.getElementById("result");
+
+    let questionIndex = 0;
+    let score = 0;
+    let currentBatch = 0;
+    let batchWords = [];
+    let dragging = false;
+    let dragStart = null;
+
+    const dots = Array.from({ length: 20 }, (_, index) => {
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      dot.setAttribute("aria-label", `الكلمة ${index + 1}`);
+      progress.appendChild(dot);
+      return dot;
+    });
+
+    function arabicNumber(number) {
+      return new Intl.NumberFormat("ar").format(number);
+    }
+
+    function playSound(correct) {
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+
+        playSound.context ||= new AudioContextClass();
+        const context = playSound.context;
+        if (context.state === "suspended") context.resume();
+
+        const frequencies = correct ? [523, 659, 784] : [330, 260];
+
+        frequencies.forEach((frequency, index) => {
+          const oscillator = context.createOscillator();
+          const gain = context.createGain();
+          const start = context.currentTime + index * 0.11;
+          const duration = correct ? 0.14 : 0.18;
+
+          oscillator.type = "sine";
+          oscillator.frequency.value = frequency;
+          gain.gain.setValueAtTime(0.001, start);
+          gain.gain.linearRampToValueAtTime(0.1, start + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
+
+          oscillator.connect(gain);
+          gain.connect(context.destination);
+          oscillator.start(start);
+          oscillator.stop(start + duration);
+        });
+      } catch (_) {
+        // تستمر اللعبة حتى لو لم يدعم المتصفح تشغيل الصوت.
+      }
+    }
+
+    function getCurrentTarget() {
+      return targetSequence[questionIndex];
+    }
+
+    function createWordCard(item) {
+      const card = document.createElement("div");
+      card.className = "word-card";
+      card.dataset.position = item.position;
+      card.dataset.word = item.word;
+      card.setAttribute("role", "listitem");
+      card.setAttribute("aria-label", item.word);
+
+      const letters = Array.from(item.word);
+      let highlightedTa = false;
+
+      card.innerHTML = letters.map(letter => {
+        if (letter === "ت" && !highlightedTa) {
+          highlightedTa = true;
+          return `<span class="ta">${letter}</span>`;
+        }
+        return letter;
+      }).join("");
+
+      return card;
+    }
+
+    function renderBatch() {
+      batchWords = [...batches[currentBatch]];
+
+      // نخلط أماكن الكلمات داخل المجموعة.
+      for (let i = batchWords.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [batchWords[i], batchWords[j]] = [batchWords[j], batchWords[i]];
+      }
+
+      wordsElement.replaceChildren(...batchWords.map(createWordCard));
+    }
+
+    function updateScreen() {
+      const target = getCurrentTarget();
+      questionCounter.textContent =
+        `الكلمة ${arabicNumber(questionIndex + 1)} من ٢٠`;
+      scoreElement.textContent = arabicNumber(score);
+      targetPositionElement.textContent = positionNames[target];
+
+      dots.forEach((dot, index) => {
+        dot.classList.toggle("current", index === questionIndex);
+        dot.classList.toggle("done", index < questionIndex);
+      });
+    }
+
+    function startGame() {
+      questionIndex = 0;
+      score = 0;
+      currentBatch = 0;
+      result.hidden = true;
+      gameArea.hidden = false;
+      dragLetter.hidden = false;
+      message.textContent = "اسحب حرف ت إلى إحدى الكلمات المناسبة.";
+      renderBatch();
+      updateScreen();
+    }
+
+    function finishGame() {
+      gameArea.hidden = true;
+      result.hidden = false;
+      document.getElementById("finalScore").textContent = arabicNumber(score);
+    }
+
+    function resetDraggedLetter() {
+      dragLetter.classList.remove("dragging");
+      dragLetter.style.left = "";
+      dragLetter.style.top = "";
+      dragLetter.style.width = "";
+      dragLetter.style.height = "";
+      dragLetter.style.transform = "";
+      dragLetter.style.position = "";
+      dragLetter.style.zIndex = "";
+      dragLetter.style.pointerEvents = "";
+    }
+
+    function beginDrag(event) {
+      if (result.hidden === false) return;
+      event.preventDefault();
+
+      dragging = true;
+      dragStart = {
+        x: event.clientX,
+        y: event.clientY,
+        rect: dragLetter.getBoundingClientRect()
+      };
+
+      dragLetter.classList.add("dragging");
+      dragLetter.style.left = `${dragStart.rect.left}px`;
+      dragLetter.style.top = `${dragStart.rect.top}px`;
+      dragLetter.style.width = `${dragStart.rect.width}px`;
+      dragLetter.style.height = `${dragStart.rect.height}px`;
+      dragLetter.style.transform = "none";
+
+      dragLetter.setPointerCapture?.(event.pointerId);
+      moveDrag(event);
+    }
+
+    function moveDrag(event) {
+      if (!dragging || !dragStart) return;
+
+      dragLetter.style.left =
+        `${event.clientX - dragStart.rect.width / 2}px`;
+      dragLetter.style.top =
+        `${event.clientY - dragStart.rect.height / 2}px`;
+    }
+
+    function endDrag(event) {
+      if (!dragging) return;
+
+      dragging = false;
+      dragLetter.style.pointerEvents = "none";
+      const elementUnderPointer = document.elementFromPoint(event.clientX, event.clientY);
+      const card = elementUnderPointer?.closest(".word-card");
+      resetDraggedLetter();
+
+      if (!card) {
+        message.textContent = "اسقط حرف ت فوق إحدى الكلمات 😊";
+        return;
+      }
+
+      const target = getCurrentTarget();
+
+      if (card.dataset.position === target) {
+        acceptWord(card);
+      } else {
+        card.classList.add("wrong");
+        message.textContent = `حاول مرة أخرى! ابحث عن ت في ${positionNames[target]}.`;
+        playSound(false);
+        setTimeout(() => card.classList.remove("wrong"), 350);
+      }
+    }
+
+    function acceptWord(card) {
+      score++;
+      scoreElement.textContent = arabicNumber(score);
+      card.classList.add("removing");
+      message.textContent = "إجابة صحيحة! أضفنا نقطة إلى رصيدك ⭐";
+      playSound(true);
+
+      dots[questionIndex].classList.remove("current");
+      dots[questionIndex].classList.add("done");
+
+      setTimeout(() => {
+        card.remove();
+        questionIndex++;
+
+        if (questionIndex >= 20) {
+          finishGame();
+          return;
+        }
+
+        // كل خمس كلمات نعرض مجموعة جديدة من خمس كلمات.
+        const newBatch = Math.floor(questionIndex / 5);
+        if (newBatch !== currentBatch) {
+          currentBatch = newBatch;
+          renderBatch();
+        }
+
+        updateScreen();
+        message.textContent = "أحسنت! اسحب حرف ت إلى الكلمة التالية.";
+      }, 450);
+    }
+
+    dragLetter.addEventListener("pointerdown", beginDrag);
+    dragLetter.addEventListener("pointermove", moveDrag);
+    dragLetter.addEventListener("pointerup", endDrag);
+    dragLetter.addEventListener("pointercancel", () => {
+      dragging = false;
+      resetDraggedLetter();
+    });
+
+    dragLetter.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        message.textContent = "اسحب حرف ت إلى إحدى الكلمات المناسبة.";
+      }
+    });
+
+    document.getElementById("restartButton").addEventListener("click", startGame);
+
+    startGame();
+  </script>
+</body>
+</html>
